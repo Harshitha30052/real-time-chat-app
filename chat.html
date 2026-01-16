@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Chat Application</title>
+
+<script src="/socket.io/socket.io.js"></script>
+<script type="module">
+  import "https://cdn.jsdelivr.net/npm/emoji-picker-element@^1/index.js";
+</script>
+
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        background: #f0f2f5;
+        margin: 0;
+        padding: 0;
+    }
+
+    #welcomeScreen {
+        width: 100%;
+        height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background: white;
+    }
+
+    .welcome-box {
+        background: #fff;
+        padding: 35px;
+        border-radius: 15px;
+        width: 350px;
+        box-shadow: 0 0 10px rgba(0,0,0,0.2);
+        text-align: center;
+    }
+
+    .welcome-box input, select {
+        width: 90%;
+        padding: 10px;
+        margin: 10px 0;
+        border-radius: 8px;
+        border: 1px solid #ccc;
+    }
+
+    .btn {
+        width: 90%;
+        padding: 12px;
+        background: #007bff;
+        color: white;
+        margin-top: 10px;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+    }
+
+    .btn:hover { background: #0056b3; }
+
+    #chatContainer {
+        display: none;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+    }
+
+    #topBar {
+        background: #007bff;
+        color: white;
+        padding: 12px;
+        text-align: center;
+        font-size: 20px;
+        position: relative;
+    }
+
+    #deleteChat {
+        position: absolute;
+        right: 10px;
+        top: 8px;
+        padding: 5px 10px;
+        font-size: 12px;
+        background: #dc3545;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        color: white;
+    }
+
+    #chatBody {
+        display: flex;
+        height: calc(100vh - 60px);
+    }
+
+    #onlineUsers {
+        width: 20%;
+        background: white;
+        padding: 15px;
+        border-right: 1px solid #dcdcdc;
+        overflow-y: auto;
+    }
+
+    #messageArea {
+        width: 80%;
+        display: flex;
+        flex-direction: column;
+        padding: 10px;
+        position: relative;
+    }
+
+    #messages {
+        flex: 1;
+        overflow-y: auto;
+        padding: 10px;
+        background: #eef0f3;
+        border-radius: 10px;
+    }
+
+    .msg {
+        background: white;
+        padding: 8px 12px;
+        margin: 8px 0;
+        border-radius: 10px;
+        max-width: 60%;
+    }
+
+    .self {
+        background: #d1ffd1;
+        margin-left: auto;
+    }
+
+    .dateTag {
+        text-align: center;
+        margin: 10px 0;
+        font-weight: bold;
+        color: #444;
+    }
+
+    #typing {
+        height: 20px;
+        color: #555;
+        margin-top: 5px;
+    }
+
+    #inputArea {
+        display: flex;
+        padding: 10px;
+        background: white;
+        border-top: 1px solid #ccc;
+    }
+
+    #msgInput {
+        flex: 1;
+        padding: 10px;
+        border-radius: 8px;
+        border: 1px solid #ccc;
+    }
+
+    emoji-picker {
+        position: absolute;
+        bottom: 60px;
+        left: 10px;
+        display: none;
+        z-index: 1000;
+    }
+</style>
+</head>
+<body>
+
+<div id="welcomeScreen">
+    <div class="welcome-box">
+        <h2>Welcome to Chat</h2>
+        <input type="text" id="username" placeholder="Enter username" />
+        <select id="roomType">
+            <option value="public">Public Room</option>
+            <option value="private">Private Room</option>
+        </select>
+        <div id="secretKeyBox" style="display:none;">
+            <input type="text" id="secretKey" placeholder="Enter Secret Key" />
+            <button class="btn" id="generateKey">Generate Key</button>
+            <button class="btn" id="copyKey">Copy Key</button>
+        </div>
+        <button class="btn" id="joinBtn" style="background:#28a745;">Join Chat</button>
+    </div>
+</div>
+
+<div id="chatContainer">
+  <div id="topBar" style="
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:10px 15px;
+    background:#007bff;
+    color:white;
+    height:50px;
+">
+    <span id="roomTitle" style="font-weight:bold;">Chat Room</span>
+    <div style="display:flex; align-items:center;">
+        <button id="deleteChat" style="
+            padding:5px 8px;
+            font-size:12px;
+            background:#dc3545;
+            color:white;
+            border:none;
+            border-radius:6px;
+            cursor:pointer;
+        ">Delete Chat</button>
+       
+    </div>
+</div>
+
+
+    <div id="chatBody">
+        <!-- <div id="onlineUsers">
+            <h3>Online Users</h3>
+            <ul id="userList"></ul>
+        </div> -->
+        <div id="onlineUsers" style="display:flex; flex-direction:column; justify-content:space-between; height:100%;">
+    <div>
+        <h3>Online Users</h3>
+        <ul id="userList"></ul>
+    </div>
+    <button id="logoutBtn" style="
+        padding:5px 10px;
+        font-size:14px;
+        background:#c0040a;
+        color:white;
+        border:none;
+        border-radius:6px;
+        cursor:pointer;
+        margin-top:8px;
+    ">Logout</button>
+</div>
+
+
+        <div id="messageArea">
+            <div id="messages"></div>
+            <div id="typing"></div>
+
+            <emoji-picker id="emojiPicker"></emoji-picker>
+
+            <div id="inputArea">
+                <button id="emojiBtn" class="btn" style="width:50px;">😊</button>
+                <input id="msgInput" placeholder="Type your message..." />
+                <button id="sendBtn" class="btn" style="width:60px;">Send</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const socket = io();
+let username = "";
+let currentRoom = "";
+let lastDateShown = "";
+
+const welcomeScreen = document.getElementById("welcomeScreen");
+const chatContainer = document.getElementById("chatContainer");
+const joinBtn = document.getElementById("joinBtn");
+const roomType = document.getElementById("roomType");
+const secretKeyBox = document.getElementById("secretKeyBox");
+const secretKeyInput = document.getElementById("secretKey");
+const messagesEl = document.getElementById("messages");
+const msgInput = document.getElementById("msgInput");
+const typingEl = document.getElementById("typing");
+const emojiPicker = document.getElementById("emojiPicker");
+const emojiBtn = document.getElementById("emojiBtn");
+const deleteChatBtn = document.getElementById("deleteChat");
+const roomTitle = document.getElementById("roomTitle");
+const sendBtn = document.getElementById("sendBtn");
+
+roomType.onchange = () => {
+    secretKeyBox.style.display = roomType.value === "private" ? "block" : "none";
+};
+
+document.getElementById("generateKey").onclick = () => {
+    secretKeyInput.value = Math.random().toString(36).substr(2,6).toUpperCase();
+};
+
+document.getElementById("copyKey").onclick = () => {
+    secretKeyInput.select();
+    document.execCommand("copy");
+};
+
+joinBtn.onclick = () => {
+    username = document.getElementById("username").value.trim();
+    if (!username) return alert("Enter username first!");
+
+    let key = secretKeyInput.value.trim();
+    currentRoom = roomType.value === "private" ? "private_" + key : "Public";
+
+    socket.emit("joinRoom", { room: currentRoom, username });
+    roomTitle.innerText = "Room: " + currentRoom;
+    messagesEl.innerHTML = "";
+    lastDateShown = "";
+
+    welcomeScreen.style.display = "none";
+    chatContainer.style.display = "flex";
+};
+document.getElementById("logoutBtn").onclick = () => {
+    if(!confirm("Are you sure you want to logout?")) return;
+
+    localStorage.removeItem('username');
+    
+    window.location.href = "login.html"; // or your login page
+};
+
+
+sendBtn.onclick = sendMessage;
+msgInput.onkeydown = (e) => { if(e.key==='Enter') sendMessage(); };
+
+function sendMessage() {
+    const text = msgInput.value.trim();
+    if(!text || !currentRoom) return;
+    socket.emit("chatMessage", { room: currentRoom, username, msg: text });
+    msgInput.value = '';
+}
+
+msgInput.addEventListener("input", () => {
+    socket.emit("typing", { room: currentRoom, username });
+});
+
+customElements.whenDefined('emoji-picker').then(()=>{
+    emojiBtn.onclick = ()=> {
+        emojiPicker.style.display = emojiPicker.style.display==='block'?'none':'block';
+    };
+    emojiPicker.addEventListener('emoji-click', e => {
+        msgInput.value += e.detail.unicode;
+        emojiPicker.style.display='none';
+        msgInput.focus();
+    });
+});
+
+deleteChatBtn.onclick = () => {
+    if(!currentRoom) return;
+    if(!confirm("Delete all chat messages for this room?")) return;
+    socket.emit("deleteChat", currentRoom);
+    messagesEl.innerHTML = '';
+    lastDateShown='';
+};
+
+// SOCKET EVENTS
+socket.on("loadOldMessages", rows => {
+    rows.forEach(r => appendMessage(r.username, r.message, r.timestamp));
+});
+
+socket.on("message", data => {
+    appendMessage(data.username, data.msg, data.timestamp);
+});
+
+socket.on("notification", text => {
+    const n = document.createElement("div");
+    n.className="dateTag";
+    n.innerText = text;
+    messagesEl.appendChild(n);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+});
+
+socket.on("updateUsers", list => {
+    const ul = document.getElementById("userList");
+    ul.innerHTML = "";
+    list.forEach(u => {
+        const li = document.createElement("li");
+        li.innerText = u;
+        ul.appendChild(li);
+    });
+});
+
+socket.on("showTyping", user => {
+    typingEl.innerText = user + " is typing...";
+    setTimeout(()=> typingEl.innerText='', 2000);
+});
+
+function appendMessage(sender, msg, time){
+    const date = new Date(time);
+    const today = new Date();
+    const dateLabel = date.toDateString() === today.toDateString()? "Today": date.toDateString();
+
+    if(dateLabel !== lastDateShown){
+        const d = document.createElement("div");
+        d.className="dateTag"; d.innerText=dateLabel;
+        messagesEl.appendChild(d);
+        lastDateShown=dateLabel;
+    }
+
+    const el = document.createElement("div");
+    el.className="msg "+(sender===username?"self":"");
+    el.innerHTML=`<b>${sender}</b>: ${msg}<br><small>${date.toLocaleTimeString()}</small>`;
+    messagesEl.appendChild(el);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+}
+</script>
+
+</body>
+</html>
