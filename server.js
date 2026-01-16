@@ -37,6 +37,10 @@ db.connect(err => {
   else console.log('Connected to MySQL');
 });
 
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'login.html'));
+});
+
 // register route
 app.post('/register', (req, res) => {
   const { username, email, password } = req.body;
