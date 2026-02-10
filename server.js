@@ -20,9 +20,9 @@ app.use(express.static(__dirname)); // serves html files in root
 // MySQL connection (update creds if needed)
 // const db = mysql.createConnection({
 //   host: 'localhost',
-//   user: 'root',
-//   password: 'Harshi@0987',
-//   database: 'hotel_booking'
+//   user: '',
+//   password: '',
+//   database: ''
 // });
 const db = mysql.createConnection({
   host: process.env.DB_HOST,
