@@ -15,7 +15,7 @@ const io = new Server(server);
 
 const SECRET = 'abcdxyz@123'; // change in production
 app.use(bodyParser.json());
-app.use(express.static(__dirname)); // serves html files in root
+app.use(express.static(path.join(__dirname, '../client')));
 
 // MySQL connection (update creds if needed)
 // const db = mysql.createConnection({
@@ -38,7 +38,7 @@ db.connect(err => {
 });
 
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'login.html'));
+  res.sendFile(path.join(__dirname, '../client', 'login.html'));
 });
 
 // register route
