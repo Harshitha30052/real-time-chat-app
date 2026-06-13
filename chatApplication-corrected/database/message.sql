@@ -1,0 +1,8 @@
+CREATE TABLE IF NOT EXISTS messages (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  room VARCHAR(255) NOT NULL,
+  username VARCHAR(255) NOT NULL,
+  message TEXT NOT NULL,
+  timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_room_timestamp (room, timestamp)
+);
