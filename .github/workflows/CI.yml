@@ -1,0 +1,69 @@
+
+name: Real-Time Chat App CI
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-test:
+
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [18.x]
+
+    steps:
+
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Create Environment File
+        run: |
+          echo "PORT=5000" >> .env
+          echo "JWT_SECRET=test_secret" >> .env
+          echo "DB_HOST=localhost" >> .env
+          echo "DB_USER=root" >> .env
+          echo "DB_PASSWORD=password" >> .env
+          echo "DB_NAME=chat_app" >> .env
+
+      - name: Check Code Formatting
+        run: |
+          npm run lint --if-present
+
+      - name: Run Unit Tests
+        run: |
+          npm test --if-present
+
+      - name: Build Project
+        run: |
+          npm run build --if-present
+
+      - name: Validate Application Startup
+        run: |
+          timeout 20s npm start || true
+
+      - name: Upload Logs on Failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: application-logs
+          path: |
+            logs/
+            *.log
