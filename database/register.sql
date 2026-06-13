@@ -1,1 +1,0 @@
-create table register(id number AUTOINCREMENT,name varchar2(200),email varchar2(500),password varchar2(500));
